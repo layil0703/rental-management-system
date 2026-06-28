@@ -1,0 +1,874 @@
+﻿const viewTitles = {
+  dashboard: "營運總覽",
+  cases: "案件管理",
+  properties: "物件管理",
+  finance: "收支管理",
+  assets: "家電與前置投入",
+  floorplans: "格局圖管理",
+  repairs: "修繕工單",
+  reports: "投報率報表",
+};
+
+const storageKeys = {
+  cases: "rental_admin_cases_v1",
+  floorPlans: "rental_admin_floor_plans_v1",
+  transactions: "rental_admin_transactions_v1",
+  repairs: "rental_admin_repairs_v1",
+  assets: "rental_admin_assets_v1",
+};
+
+const defaultCases = [
+  { name: "信義 A3", mode: "master_lease", modeLabel: "包租代管", landlord: "林小姐", income: 42000, expense: 28500, companyInvestment: 0, roi: 48.2, status: "active", statusLabel: "進行中" },
+  { name: "大安 2A", mode: "master_lease", modeLabel: "包租代管", landlord: "陳先生", income: 36000, expense: 24800, companyInvestment: 0, roi: 41.6, status: "active", statusLabel: "進行中" },
+  { name: "板橋 B2", mode: "agency_management", modeLabel: "代租代管", landlord: "王小姐", income: 6200, expense: 1800, companyInvestment: 0, roi: 32.4, status: "active", statusLabel: "進行中" },
+  { name: "中山 5F", mode: "master_lease", modeLabel: "包租代管", landlord: "張先生", income: 30000, expense: 26100, companyInvestment: 0, roi: 18.9, status: "paused", statusLabel: "修繕中" },
+  { name: "三重 C1", mode: "agency_management", modeLabel: "代租代管", landlord: "黃先生", income: 5400, expense: 1500, companyInvestment: 0, roi: 29.7, status: "active", statusLabel: "進行中" },
+];
+
+const defaultFloorPlans = [
+  { title: "大安 2A 類 3D 圖", planType: "類 3D 格局圖", visibility: "房東可看", fileName: "daan-2a-3d.webp", markers: "3 個設備 / 1 筆修繕" },
+  { title: "信義 A3 家具配置圖", planType: "家具配置圖", visibility: "僅內部", fileName: "xinyi-a3-layout.pdf", markers: "5 個設備" },
+];
+
+const defaultTransactions = [
+  { date: "2026-06-28", caseName: "信義 A3", type: "income", typeLabel: "收入", category: "房客租金", amount: 42000, note: "本月租金" },
+  { date: "2026-06-28", caseName: "信義 A3", type: "payout", typeLabel: "房東撥款", category: "房東租金", amount: 28500, note: "固定撥款" },
+  { date: "2026-06-27", caseName: "中山 5F", type: "expense", typeLabel: "支出", category: "冷氣維修", amount: 6500, note: "待報價" },
+  { date: "2026-06-26", caseName: "板橋 B2", type: "income", typeLabel: "收入", category: "管理費", amount: 6200, note: "代租代管" },
+];
+
+const properties = [
+  ["信義 A3", "2 房 1 廳", "包租代管", "已出租", "主要格局圖 2 張"],
+  ["大安 2A", "套房", "包租代管", "已出租", "類 3D 圖待更新"],
+  ["板橋 B2", "3 房 2 廳", "代租代管", "招租中", "家具配置圖 1 張"],
+  ["中山 5F", "雅房", "包租代管", "修繕中", "水電圖待補"],
+  ["三重 C1", "整層", "代租代管", "已出租", "平面圖 1 張"],
+  ["松山 8B", "2 房 1 廳", "包租代管", "空置", "尚未上傳"],
+];
+
+const defaultAssets = [
+  { assetName: "冷氣", propertyName: "信義 A3", category: "家電", amount: 32000, months: 36, monthly: 889, paidBy: "公司" },
+  { assetName: "冰箱", propertyName: "大安 2A", category: "家電", amount: 18000, months: 36, monthly: 500, paidBy: "公司" },
+  { assetName: "洗衣機", propertyName: "板橋 B2", category: "家電", amount: 14500, months: 36, monthly: 403, paidBy: "房東" },
+  { assetName: "床組", propertyName: "中山 5F", category: "家具", amount: 12000, months: 24, monthly: 500, paidBy: "公司" },
+  { assetName: "熱水器", propertyName: "三重 C1", category: "家電", amount: 21000, months: 48, monthly: 438, paidBy: "房東" },
+  { assetName: "衣櫃", propertyName: "松山 8B", category: "家具", amount: 16000, months: 48, monthly: 333, paidBy: "公司" },
+];
+
+const defaultRepairs = [
+  { title: "冷氣不冷", caseName: "中山 5F", status: "reviewing", statusLabel: "報價中", priority: "urgent", cost: 6500, location: "主臥冷氣旁" },
+  { title: "浴室排水慢", caseName: "大安 2A", status: "scheduled", statusLabel: "排程中", priority: "normal", cost: 2000, location: "衛浴排水孔" },
+  { title: "門鎖更換", caseName: "板橋 B2", status: "completed", statusLabel: "已完成", priority: "low", cost: 1800, location: "大門" },
+  { title: "牆面補漆", caseName: "信義 A3", status: "reviewing", statusLabel: "審核中", priority: "normal", cost: 3200, location: "客廳牆面" },
+];
+
+
+let activeFilter = "all";
+let cases = normalizeCases(loadStoredArray(storageKeys.cases, defaultCases));
+let floorPlans = loadStoredArray(storageKeys.floorPlans, defaultFloorPlans);
+let transactions = loadStoredArray(storageKeys.transactions, defaultTransactions);
+let repairs = loadStoredArray(storageKeys.repairs, defaultRepairs);
+let assets = loadStoredArray(storageKeys.assets, defaultAssets);
+
+const formatMoney = (amount) =>
+  new Intl.NumberFormat("zh-TW", { style: "currency", currency: "TWD", maximumFractionDigits: 0 }).format(amount);
+
+let selectedLayoutItem = null;
+
+function statusClass(value) {
+  const normalized = String(value || "").toLowerCase();
+  if (["active", "paid", "completed", "進行中", "已完成", "收入"].includes(normalized)) return "status-good";
+  if (["paused", "scheduled", "reviewing", "pending", "修繕中", "審核中", "已排程", "房東撥款"].includes(normalized)) return "status-warn";
+  if (["overdue", "urgent", "cancelled", "支出"].includes(normalized)) return "status-danger";
+  return "status-neutral";
+}
+
+function editRecord(type, name) {
+  const labels = {
+    case: "案件",
+    property: "物件",
+    transaction: "收支",
+    asset: "家電/投入",
+    repair: "修繕",
+  };
+  window.alert(`${labels[type] || "資料"}「${name}」的編輯入口已預留；正式版會開啟可儲存的編輯表單。`);
+}
+
+function selectLayoutItem(item) {
+  document.querySelectorAll(".layout-item.selected").forEach((node) => node.classList.remove("selected"));
+  selectedLayoutItem = item;
+  if (selectedLayoutItem) {
+    selectedLayoutItem.classList.add("selected");
+  }
+  updateLayoutToolbar();
+}
+
+function updateLayoutToolbar() {
+  const label = document.getElementById("selectedLayoutLabel");
+  if (!label) return;
+  label.textContent = selectedLayoutItem ? `已選取：${selectedLayoutItem.textContent.trim()}` : "尚未選取物件";
+}
+
+function rotateSelectedLayout(degrees) {
+  if (!selectedLayoutItem) return;
+  const current = Number(selectedLayoutItem.dataset.rotation || 0);
+  const next = (current + degrees) % 360;
+  selectedLayoutItem.dataset.rotation = String(next);
+  selectedLayoutItem.style.transform = `rotate(${next}deg)`;
+}
+
+function deleteSelectedLayout() {
+  if (!selectedLayoutItem) return;
+  selectedLayoutItem.remove();
+  selectedLayoutItem = null;
+  updateLayoutToolbar();
+}
+
+function replaceFloorPlanWithImage(file) {
+  const plan = document.querySelector(".fake-plan");
+  if (!plan || !file || !file.type.startsWith("image/")) return false;
+
+  const reader = new FileReader();
+  reader.addEventListener("load", () => {
+    plan.querySelectorAll(".layout-item, .marker").forEach((item) => item.remove());
+    plan.classList.add("has-upload");
+    plan.style.backgroundImage = `url("${reader.result}")`;
+    selectedLayoutItem = null;
+    updateLayoutToolbar();
+  });
+  reader.readAsDataURL(file);
+  return true;
+}
+
+function createLayoutObject(type, customLabel = "") {
+  const plan = document.querySelector(".fake-plan");
+  if (!plan) return;
+
+  const config = {
+    "single-bed": { label: "單人床", className: "furniture-item single-bed", width: 68, height: 38 },
+    "double-bed": { label: "雙人床", className: "furniture-item double-bed", width: 92, height: 48 },
+    desk: { label: "桌子", className: "furniture-item desk", width: 62, height: 42 },
+    cabinet: { label: "櫃子", className: "furniture-item cabinet", width: 52, height: 72 },
+    door: { label: "門口", className: "opening-item door", width: 56, height: 18 },
+    window: { label: "窗戶", className: "opening-item window", width: 90, height: 16 },
+    room: { label: "房間", className: "room layout-room", width: 150, height: 110 },
+  }[type];
+
+  if (!config) return;
+
+  const item = document.createElement("button");
+  item.type = "button";
+  item.className = `layout-item ${config.className}`;
+  item.textContent = customLabel || config.label;
+  item.style.left = "8%";
+  item.style.top = "8%";
+  item.style.width = `${config.width}px`;
+  item.style.height = `${config.height}px`;
+  item.dataset.layoutKind = type === "door" || type === "window" ? "opening" : type === "room" ? "room" : "furniture";
+  plan.appendChild(item);
+  ensureResizeHandle(item);
+  enableLayoutDragging(item);
+  selectLayoutItem(item);
+}
+
+function ensureResizeHandle(item) {
+  if (item.querySelector(".resize-handle")) return;
+  const handle = document.createElement("span");
+  handle.className = "resize-handle";
+  handle.setAttribute("aria-hidden", "true");
+  item.appendChild(handle);
+  handle.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    selectLayoutItem(item);
+    handle.setPointerCapture(event.pointerId);
+
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const startWidth = item.offsetWidth;
+    const startHeight = item.offsetHeight;
+
+    const resizeItem = (moveEvent) => {
+      item.style.width = `${Math.max(28, startWidth + moveEvent.clientX - startX)}px`;
+      item.style.height = `${Math.max(14, startHeight + moveEvent.clientY - startY)}px`;
+    };
+
+    const stopResize = () => {
+      handle.removeEventListener("pointermove", resizeItem);
+      handle.removeEventListener("pointerup", stopResize);
+      handle.removeEventListener("pointercancel", stopResize);
+    };
+
+    handle.addEventListener("pointermove", resizeItem);
+    handle.addEventListener("pointerup", stopResize);
+    handle.addEventListener("pointercancel", stopResize);
+  });
+}
+
+function enableLayoutDragging(targetItem) {
+  const plan = document.querySelector(".fake-plan");
+  if (!plan) return;
+
+  const items = targetItem ? [targetItem] : Array.from(document.querySelectorAll(".layout-item"));
+  items.forEach((item) => {
+    if (item.dataset.dragReady === "true") return;
+    item.dataset.dragReady = "true";
+    ensureResizeHandle(item);
+    item.addEventListener("click", () => selectLayoutItem(item));
+    item.addEventListener("pointerdown", (event) => {
+      if (event.target !== item) return;
+      event.preventDefault();
+      selectLayoutItem(item);
+      item.classList.add("dragging");
+      item.setPointerCapture(event.pointerId);
+
+      const planRect = plan.getBoundingClientRect();
+      const itemRect = item.getBoundingClientRect();
+      const offsetX = event.clientX - itemRect.left;
+      const offsetY = event.clientY - itemRect.top;
+
+      const moveItem = (moveEvent) => {
+        const maxX = plan.clientWidth - item.offsetWidth;
+        const maxY = plan.clientHeight - item.offsetHeight;
+        const nextX = Math.min(Math.max(moveEvent.clientX - planRect.left - offsetX, 0), maxX);
+        const nextY = Math.min(Math.max(moveEvent.clientY - planRect.top - offsetY, 0), maxY);
+        item.style.left = `${(nextX / plan.clientWidth) * 100}%`;
+        item.style.top = `${(nextY / plan.clientHeight) * 100}%`;
+      };
+
+      const stopDrag = () => {
+        item.classList.remove("dragging");
+        item.removeEventListener("pointermove", moveItem);
+        item.removeEventListener("pointerup", stopDrag);
+        item.removeEventListener("pointercancel", stopDrag);
+      };
+
+      item.addEventListener("pointermove", moveItem);
+      item.addEventListener("pointerup", stopDrag);
+      item.addEventListener("pointercancel", stopDrag);
+    });
+  });
+}
+
+function loadStoredArray(key, fallback) {
+  try {
+    const stored = localStorage.getItem(key);
+    return stored ? JSON.parse(stored) : [...fallback];
+  } catch {
+    return [...fallback];
+  }
+}
+
+function inferInvestmentFromLegacyRoi(item) {
+  const netProfit = Number(item.income || 0) - Number(item.expense || 0);
+  const oldRoi = Number(item.roi || 0);
+  if (netProfit <= 0 || oldRoi <= 0) return 0;
+  return Math.round((netProfit * 12 * 100) / oldRoi);
+}
+
+function normalizeCases(items) {
+  return items.map((item) => {
+    if (Object.prototype.hasOwnProperty.call(item, "companyInvestment")) {
+      return {
+        ...item,
+        companyInvestment: Number(item.companyInvestment || 0),
+        investmentSource: item.investmentSource || "manual",
+      };
+    }
+
+    const inferredInvestment = inferInvestmentFromLegacyRoi(item);
+    return {
+      ...item,
+      companyInvestment: inferredInvestment,
+      investmentSource: inferredInvestment > 0 ? "legacy_roi" : "missing",
+    };
+  });
+}
+
+function saveState() {
+  localStorage.setItem(storageKeys.cases, JSON.stringify(cases));
+  localStorage.setItem(storageKeys.floorPlans, JSON.stringify(floorPlans));
+  localStorage.setItem(storageKeys.transactions, JSON.stringify(transactions));
+  localStorage.setItem(storageKeys.repairs, JSON.stringify(repairs));
+  localStorage.setItem(storageKeys.assets, JSON.stringify(assets));
+}
+
+function getRepairStatusLabel(status) {
+  const labels = {
+    reported: "已通報",
+    reviewing: "審核中",
+    scheduled: "已排程",
+    completed: "已完成",
+  };
+  return labels[status] || "已通報";
+}
+
+function getRepairPriorityLabel(priority) {
+  const labels = {
+    low: "低",
+    normal: "一般",
+    high: "高",
+    urgent: "緊急",
+  };
+  return labels[priority] || "一般";
+}
+
+function getTransactionTypeLabel(type) {
+  const labels = {
+    income: "收入",
+    expense: "支出",
+    payout: "房東撥款",
+    reimbursement: "代墊回收",
+  };
+  return labels[type] || "其他";
+}
+
+function normalizeName(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function signedTransactionAmount(item) {
+  if (item.type === "income" || item.type === "reimbursement") return item.amount;
+  return -item.amount;
+}
+
+function getCaseFinancialSnapshot(caseItem) {
+  const caseTransactions = transactions.filter((item) => item.caseName === caseItem.name);
+  const transactionNet = caseTransactions.reduce((sum, item) => sum + signedTransactionAmount(item), 0);
+  const fallbackNet = caseItem.income - caseItem.expense;
+  const relatedAssets = assets.filter((item) => item.propertyName === caseItem.name);
+  const assetDepreciation = relatedAssets.reduce((sum, item) => sum + item.monthly, 0);
+  const caseInvestment = Number(caseItem.companyInvestment || 0);
+  const assetInvestment = relatedAssets
+    .filter((item) => item.paidBy === "公司" || item.paidBy === "共同分攤")
+    .reduce((sum, item) => sum + item.amount, 0);
+  const companyInvested = caseInvestment + assetInvestment;
+  const netBeforeDepreciation = caseTransactions.length ? transactionNet : fallbackNet;
+  const netProfit = netBeforeDepreciation - assetDepreciation;
+  const hasInvestment = companyInvested > 0;
+  const annualizedRoi = hasInvestment ? (netProfit * 12 / companyInvested) * 100 : null;
+  const paybackMonth = netProfit > 0 && hasInvestment ? Math.ceil(companyInvested / netProfit) : null;
+  const investmentNote =
+    caseItem.investmentSource === "legacy_roi" ? "案件投入由舊 ROI 推算" : hasInvestment ? "案件投入已設定" : "未設定公司投入";
+  const userInvestmentNote = caseItem.investmentNote ? `；${caseItem.investmentNote}` : "";
+
+  return {
+    name: caseItem.name,
+    month: new Date().toISOString().slice(0, 7),
+    netProfit,
+    annualizedRoi,
+    hasInvestment,
+    investmentSource: caseItem.investmentSource || "manual",
+    assetDepreciation,
+    companyInvested,
+    paybackMonth,
+    note: hasInvestment ? `${investmentNote}${assetDepreciation > 0 ? "，已扣家電折舊" : ""}${userInvestmentNote}` : investmentNote,
+  };
+}
+
+function getRoiSnapshots() {
+  return cases.map(getCaseFinancialSnapshot).sort((a, b) => (b.annualizedRoi ?? -999999) - (a.annualizedRoi ?? -999999));
+}
+
+function getModeLabel(mode) {
+  return mode === "master_lease" ? "包租代管" : "代租代管";
+}
+
+function calculateRoi(income, expense, investment) {
+  if (!investment || investment <= 0) return 0;
+  return ((income - expense) * 12 / investment) * 100;
+}
+
+function setView(viewId) {
+  document.querySelectorAll(".view").forEach((view) => view.classList.toggle("active", view.id === viewId));
+  document.querySelectorAll(".nav-item").forEach((item) => item.classList.toggle("active", item.dataset.view === viewId));
+  document.getElementById("view-title").textContent = viewTitles[viewId];
+}
+
+function renderDashboardMetrics() {
+  const caseCount = cases.length;
+  const masterCount = cases.filter((item) => item.mode === "master_lease").length;
+  const agencyCount = cases.filter((item) => item.mode === "agency_management").length;
+  const roiRows = getRoiSnapshots();
+  const investedRows = roiRows.filter((item) => item.annualizedRoi !== null);
+  const averageRoi = investedRows.length ? investedRows.reduce((sum, item) => sum + item.annualizedRoi, 0) / investedRows.length : null;
+  const netTotal = transactions.reduce((sum, item) => sum + signedTransactionAmount(item), 0);
+  const pendingExpense = transactions
+    .filter((item) => item.type === "expense" || item.type === "payout")
+    .reduce((sum, item) => sum + item.amount, 0);
+
+  const caseCountEl = document.getElementById("metricCaseCount");
+  if (!caseCountEl) return;
+  caseCountEl.textContent = String(caseCount);
+  document.getElementById("metricCaseSplit").textContent = `包租 ${masterCount} / 代租 ${agencyCount}`;
+  document.getElementById("metricNetProfit").textContent = formatMoney(netTotal);
+  document.getElementById("metricPendingExpense").textContent = formatMoney(pendingExpense);
+  document.getElementById("metricAverageRoi").textContent = averageRoi === null ? "未設定" : `${averageRoi.toFixed(1)}%`;
+}
+
+function renderRoiList() {
+  const snapshotsByName = new Map(getRoiSnapshots().map((item) => [item.name, item]));
+  document.getElementById("roiList").innerHTML = cases
+    .map((item) => ({ ...item, snapshot: snapshotsByName.get(item.name) }))
+    .sort((a, b) => (b.snapshot?.annualizedRoi ?? -999999) - (a.snapshot?.annualizedRoi ?? -999999))
+    .map((item) => {
+      const roi = item.snapshot?.annualizedRoi ?? null;
+      const progressValue = roi === null ? 0 : Math.max(0, Math.min(roi, 60) * 1.5);
+      return `
+        <div class="roi-row">
+          <div>
+            <strong>${item.name}</strong>
+            <small>${item.modeLabel} / ${item.landlord}</small>
+          </div>
+          <div class="progress" aria-label="${roi === null ? "未設定" : `${roi.toFixed(1)}%`}"><i style="--value: ${progressValue}%"></i></div>
+          <strong>${roi === null ? "未設定" : `${roi.toFixed(1)}%`}</strong>
+        </div>
+      `;
+    })
+    .join("");
+}
+
+function renderCaseTable(filter = activeFilter, keyword = "") {
+  const rows = cases.filter((item) => {
+    const matchesFilter = filter === "all" || item.mode === filter;
+    const haystack = `${item.name} ${item.landlord} ${item.modeLabel}`.toLowerCase();
+    return matchesFilter && haystack.includes(keyword.toLowerCase());
+  });
+
+  document.getElementById("caseTable").innerHTML = rows
+    .map((item) => {
+      const snapshot = getCaseFinancialSnapshot(item);
+      return `
+        <tr>
+          <td><strong>${item.name}</strong></td>
+        <td><span class="badge ${statusClass(item.mode)}">${item.modeLabel}</span></td>
+        <td>${item.landlord}</td>
+        <td>${formatMoney(item.income)}</td>
+        <td>${formatMoney(item.expense)}</td>
+        <td>${formatMoney(snapshot.companyInvested)}</td>
+        <td>${snapshot.annualizedRoi === null ? "未設定" : `${snapshot.annualizedRoi.toFixed(1)}%`}</td>
+        <td><span class="badge ${statusClass(item.status)}">${item.statusLabel}</span></td>
+        <td><button class="mini-button" onclick="editRecord('case', '${item.name}')">編輯</button></td>
+      </tr>
+      `;
+    })
+    .join("");
+}
+
+function renderProperties() {
+  document.getElementById("propertyGrid").innerHTML = properties
+    .map(([name, layout, mode, status, floorPlan]) => `
+      <article class="property-card">
+        <h3>${name}</h3>
+        <small>${layout}</small>
+        <div class="card-meta">
+          <div><span>模式</span><strong>${mode}</strong></div>
+          <div><span>狀態</span><strong class="badge ${statusClass(status)}">${status}</strong></div>
+          <div><span>格局圖</span><strong>${floorPlan}</strong></div>
+        </div>
+        <button class="mini-button card-action" onclick="editRecord('property', '${name}')">編輯</button>
+      </article>
+    `)
+    .join("");
+}
+
+function renderAssets() {
+  const summary = document.getElementById("assetSummary");
+  const totalMonthly = assets.reduce((sum, item) => sum + item.monthly, 0);
+  if (summary) summary.textContent = `每月折舊 ${formatMoney(totalMonthly)}`;
+  document.getElementById("assetGrid").innerHTML = assets
+    .map((item) => `
+      <article class="asset-card">
+        <h3>${item.assetName}</h3>
+        <small>${item.propertyName}</small>
+        <div class="card-meta">
+          <div><span>類別</span><strong>${item.category}</strong></div>
+          <div><span>前置投入</span><strong>${formatMoney(item.amount)}</strong></div>
+          <div><span>攤提月數</span><strong>${item.months} 個月</strong></div>
+          <div><span>每月折舊</span><strong>${formatMoney(item.monthly)}</strong></div>
+          <div><span>出資方</span><strong>${item.paidBy}</strong></div>
+        </div>
+        <button class="mini-button card-action" onclick="editRecord('asset', '${item.assetName}')">編輯</button>
+      </article>
+    `)
+    .join("");
+}
+
+function renderRepairs() {
+  const board = document.getElementById("repairBoard");
+  const summary = document.getElementById("repairSummary");
+  if (!board) return;
+  const openCount = repairs.filter((item) => item.status !== "completed").length;
+  if (summary) summary.textContent = `待處理 ${openCount} 筆`;
+  board.innerHTML = repairs
+    .map((item) => `
+      <article class="repair-card">
+        <h3>${item.title}</h3>
+        <small>${item.caseName}</small>
+        <div class="card-meta">
+          <div><span>狀態</span><strong class="badge ${statusClass(item.status)}">${item.statusLabel}</strong></div>
+          <div><span>優先</span><strong class="badge ${statusClass(item.priority)}">${getRepairPriorityLabel(item.priority)}</strong></div>
+          <div><span>預估金額</span><strong>${formatMoney(item.cost)}</strong></div>
+          <div><span>格局位置</span><strong>${item.location || "未標記"}</strong></div>
+        </div>
+        <button class="mini-button card-action" onclick="editRecord('repair', '${item.title}')">編輯</button>
+      </article>
+    `)
+    .join("");
+}
+
+function renderSnapshots() {
+  document.getElementById("snapshotGrid").innerHTML = getRoiSnapshots()
+    .map((item) => `
+      <article class="snapshot-card">
+        <h3>${item.name}</h3>
+        <small>${item.month}</small>
+        <div class="card-meta">
+          <div><span>月淨利</span><strong>${formatMoney(item.netProfit)}</strong></div>
+          <div><span>家電折舊</span><strong>${formatMoney(item.assetDepreciation)}</strong></div>
+          <div><span>公司投入</span><strong>${formatMoney(item.companyInvested)}</strong></div>
+          <div><span>年化 ROI</span><strong>${item.annualizedRoi === null ? "未設定" : `${item.annualizedRoi.toFixed(1)}%`}</strong></div>
+          <div><span>回本估算</span><strong>${item.paybackMonth ? `第 ${item.paybackMonth} 月` : "尚無"}</strong></div>
+          <div><span>備註</span><strong>${item.note}</strong></div>
+        </div>
+      </article>
+    `)
+    .join("");
+}
+
+function renderTransactions() {
+  const target = document.getElementById("transactionTable");
+  const summary = document.getElementById("transactionSummary");
+  if (!target || !summary) return;
+
+  const sorted = transactions.slice().sort((a, b) => b.date.localeCompare(a.date));
+  const total = transactions.reduce((sum, item) => sum + signedTransactionAmount(item), 0);
+  summary.textContent = `目前合計 ${formatMoney(total)}`;
+  target.innerHTML = sorted
+    .map((item) => `
+      <tr>
+        <td>${item.date}</td>
+        <td><strong>${item.caseName}</strong></td>
+        <td><span class="badge ${statusClass(item.typeLabel)}">${item.typeLabel}</span></td>
+        <td>${item.category}</td>
+        <td>${formatMoney(signedTransactionAmount(item))}</td>
+        <td>${item.note || "-"}</td>
+        <td><button class="mini-button" onclick="editRecord('transaction', '${item.caseName} / ${item.category}')">編輯</button></td>
+      </tr>
+    `)
+    .join("");
+}
+
+function renderFloorPlans() {
+  const target = document.getElementById("floorPlanList");
+  if (!target) return;
+  target.innerHTML = floorPlans
+    .map((item) => `
+      <article class="floorplan-record">
+        <div>
+          <strong>${item.title}</strong>
+          <small>${item.fileName}</small>
+        </div>
+        <span class="badge">${item.planType}</span>
+        <span>${item.visibility}</span>
+        <span>${item.markers}</span>
+      </article>
+    `)
+    .join("");
+}
+
+function toCsvValue(value) {
+  return `"${String(value ?? "").replaceAll('"', '""')}"`;
+}
+
+function downloadCsv(filename, rows) {
+  const csv = rows.map((row) => row.map(toCsvValue).join(",")).join("\n");
+  const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function exportAllData() {
+  const rows = [
+    ["案件資料"],
+    ["案件", "模式", "房東", "月收入", "月支出", "公司投入", "動態月淨利", "動態年化 ROI", "狀態"],
+    ...cases.map((item) => {
+      const snapshot = getCaseFinancialSnapshot(item);
+      return [item.name, item.modeLabel, item.landlord, item.income, item.expense, snapshot.companyInvested, snapshot.netProfit, snapshot.annualizedRoi === null ? "未設定" : `${snapshot.annualizedRoi.toFixed(1)}%`, item.statusLabel];
+    }),
+    [],
+    ["收支紀錄"],
+    ["日期", "案件", "類型", "項目", "金額", "備註"],
+    ...transactions.map((item) => [item.date, item.caseName, item.typeLabel, item.category, signedTransactionAmount(item), item.note || ""]),
+    [],
+    ["ROI 快照"],
+    ["案件", "月份", "月淨利", "家電折舊", "公司投入", "投入來源", "年化 ROI", "回本估算", "備註"],
+    ...getRoiSnapshots().map((item) => [item.name, item.month, item.netProfit, item.assetDepreciation, item.companyInvested, item.investmentSource === "legacy_roi" ? "舊 ROI 推算" : "手動/資料表", item.annualizedRoi === null ? "未設定" : `${item.annualizedRoi.toFixed(1)}%`, item.paybackMonth ? `第 ${item.paybackMonth} 月` : "尚無", item.note]),
+    [],
+    ["家電與前置投入"],
+    ["物件", "品項", "類別", "投入金額", "攤提月數", "每月折舊", "出資方"],
+    ...assets.map((item) => [item.propertyName, item.assetName, item.category, item.amount, item.months, item.monthly, item.paidBy]),
+    [],
+    ["格局圖紀錄"],
+    ["名稱", "類型", "權限", "檔名", "標記"],
+    ...floorPlans.map((item) => [item.title, item.planType, item.visibility, item.fileName, item.markers]),
+    [],
+    ["修繕工單"],
+    ["案件", "標題", "狀態", "優先", "預估金額", "格局位置"],
+    ...repairs.map((item) => [item.caseName, item.title, item.statusLabel, getRepairPriorityLabel(item.priority), item.cost, item.location || ""]),
+  ];
+  downloadCsv("rental-admin-export.csv", rows);
+}
+
+function setDefaultFormValues() {
+  const dateInput = document.querySelector('#transactionForm input[name="date"]');
+  if (dateInput && !dateInput.value) {
+    dateInput.value = new Date().toISOString().slice(0, 10);
+  }
+}
+
+function bindEvents() {
+  document.querySelectorAll(".nav-item").forEach((item) => {
+    item.addEventListener("click", () => setView(item.dataset.view));
+  });
+
+  document.querySelectorAll("[data-view-link]").forEach((item) => {
+    item.addEventListener("click", () => {
+      setView(item.dataset.viewLink);
+      if (item.dataset.viewLink === "cases") {
+        document.getElementById("caseFormPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+  });
+
+  document.querySelectorAll("[data-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      activeFilter = button.dataset.filter;
+      document.querySelectorAll("[data-filter]").forEach((item) => item.classList.toggle("active", item === button));
+      renderCaseTable(activeFilter, document.getElementById("caseSearch").value);
+    });
+  });
+
+  document.getElementById("caseSearch").addEventListener("input", (event) => {
+    renderCaseTable(activeFilter, event.target.value);
+  });
+
+  document.getElementById("exportButton").addEventListener("click", exportAllData);
+
+  document.getElementById("layoutObjectForm").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    createLayoutObject(data.get("objectType"), data.get("objectLabel"));
+    event.currentTarget.reset();
+  });
+
+  document.getElementById("rotate90Button").addEventListener("click", () => rotateSelectedLayout(90));
+  document.getElementById("rotate180Button").addEventListener("click", () => rotateSelectedLayout(180));
+  document.getElementById("deleteLayoutButton").addEventListener("click", deleteSelectedLayout);
+
+  document.getElementById("investmentForm").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const caseName = String(data.get("caseName") || "").trim();
+    const companyInvestment = Number(data.get("companyInvestment"));
+    const targetCase = cases.find((item) => normalizeName(item.name) === normalizeName(caseName));
+
+    if (!targetCase) {
+      document.getElementById("investmentFormNote").textContent = `找不到案件：${caseName}。請確認名稱與案件列表一致。`;
+      return;
+    }
+
+    targetCase.companyInvestment = companyInvestment;
+    targetCase.investmentSource = "manual";
+    targetCase.investmentNote = data.get("note") || "";
+    saveState();
+    renderCaseTable(activeFilter, document.getElementById("caseSearch").value);
+    renderRoiList();
+    renderSnapshots();
+    renderDashboardMetrics();
+    document.getElementById("investmentFormNote").textContent = `${caseName} 公司投入已更新為 ${formatMoney(companyInvestment)}。`;
+    event.currentTarget.reset();
+  });
+
+  document.getElementById("transactionForm").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const type = data.get("type");
+    const amount = Number(data.get("amount"));
+    const newTransaction = {
+      date: data.get("date"),
+      caseName: data.get("caseName"),
+      type,
+      typeLabel: getTransactionTypeLabel(type),
+      category: data.get("category"),
+      amount,
+      note: data.get("note"),
+    };
+    transactions.unshift(newTransaction);
+    saveState();
+    renderTransactions();
+    renderRoiList();
+    renderCaseTable(activeFilter, document.getElementById("caseSearch").value);
+    renderSnapshots();
+    renderDashboardMetrics();
+    document.getElementById("transactionFormNote").textContent = `${newTransaction.caseName} 已新增 ${newTransaction.typeLabel} ${formatMoney(amount)}。`;
+    event.currentTarget.reset();
+    setDefaultFormValues();
+  });
+
+  document.getElementById("assetForm").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const amount = Number(data.get("amount"));
+    const months = Number(data.get("months"));
+    const categoryLabels = {
+      appliance: "家電",
+      furniture: "家具",
+      renovation: "裝修",
+      cleaning: "清潔",
+      other: "其他",
+    };
+    const newAsset = {
+      propertyName: data.get("propertyName"),
+      assetName: data.get("assetName"),
+      category: categoryLabels[data.get("category")],
+      amount,
+      months,
+      monthly: Math.round(amount / months),
+      paidBy: data.get("paidBy"),
+    };
+    assets.unshift(newAsset);
+    saveState();
+    renderAssets();
+    renderRoiList();
+    renderCaseTable(activeFilter, document.getElementById("caseSearch").value);
+    renderSnapshots();
+    renderDashboardMetrics();
+    document.getElementById("assetFormNote").textContent = `${newAsset.propertyName} 已新增 ${newAsset.assetName}，每月折舊 ${formatMoney(newAsset.monthly)}。`;
+    event.currentTarget.reset();
+  });
+
+  document.getElementById("repairForm").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const status = data.get("status");
+    const newRepair = {
+      title: data.get("title"),
+      caseName: data.get("caseName"),
+      status,
+      statusLabel: getRepairStatusLabel(status),
+      priority: data.get("priority"),
+      cost: Number(data.get("cost")),
+      location: data.get("location"),
+    };
+    repairs.unshift(newRepair);
+    saveState();
+    renderRepairs();
+    document.getElementById("repairFormNote").textContent = `${newRepair.caseName} 已新增修繕工單：${newRepair.title}。`;
+    event.currentTarget.reset();
+  });
+
+  document.getElementById("addCaseButton").addEventListener("click", () => {
+    setView("cases");
+    document.getElementById("caseFormPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  document.getElementById("caseForm").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const income = Number(data.get("income"));
+    const expense = Number(data.get("expense"));
+    const investment = Number(data.get("investment"));
+    const mode = data.get("mode");
+    const newCase = {
+      name: data.get("name"),
+      mode,
+      modeLabel: getModeLabel(mode),
+      landlord: data.get("landlord"),
+      income,
+      expense,
+      roi: calculateRoi(income, expense, investment),
+      companyInvestment: investment,
+      investmentSource: "manual",
+      status: "active",
+      statusLabel: "示範新增",
+    };
+    cases.unshift(newCase);
+    saveState();
+    renderCaseTable(activeFilter, document.getElementById("caseSearch").value);
+    renderRoiList();
+    renderSnapshots();
+    renderDashboardMetrics();
+    const snapshot = getCaseFinancialSnapshot(newCase);
+    document.getElementById("caseFormNote").textContent = `${newCase.name} 已保存到本機，公司投入 ${formatMoney(investment)}，動態年化 ROI ${snapshot.annualizedRoi === null ? "未設定" : `${snapshot.annualizedRoi.toFixed(1)}%`}。`;
+    event.currentTarget.reset();
+  });
+
+  document.getElementById("floorPlanForm").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const file = data.get("file");
+    const planTypeLabels = {
+      "2d": "2D 平面圖",
+      pseudo_3d: "類 3D 格局圖",
+      furniture_layout: "家具配置圖",
+      after_renovation: "裝修後",
+      utility_layout: "水電管線圖",
+    };
+    const visibilityLabels = {
+      internal: "僅內部",
+      landlord: "房東可看",
+      tenant: "房客可看",
+      public: "公開",
+    };
+    floorPlans.unshift({
+      title: data.get("title"),
+      planType: planTypeLabels[data.get("planType")],
+      visibility: visibilityLabels[data.get("visibility")],
+      fileName: file?.name || "尚未選擇檔案",
+      markers: "尚未標記",
+    });
+    const replaced = replaceFloorPlanWithImage(file);
+    saveState();
+    renderFloorPlans();
+    document.getElementById("floorPlanNote").textContent = replaced
+      ? "平面圖已置換為目前格局圖背景，可再用配置工具新增家具、門窗與房間區塊。"
+      : "格局圖紀錄已保存到本機。若要直接置換格局圖，請選擇 JPG、PNG、WEBP 等圖片檔。";
+    event.currentTarget.reset();
+  });
+}
+
+renderDashboardMetrics();
+saveState();
+renderRoiList();
+renderCaseTable();
+renderProperties();
+renderAssets();
+renderRepairs();
+renderSnapshots();
+renderFloorPlans();
+renderTransactions();
+setDefaultFormValues();
+bindEvents();
+enableLayoutDragging();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
