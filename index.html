@@ -137,6 +137,22 @@
             </form>
           </section>
 
+          <section class="panel action-panel edit-panel" id="caseEditPanel">
+            <div class="panel-heading"><div><p class="eyebrow">編輯</p><h2>編輯案件資料</h2></div></div>
+            <form class="form-grid" id="caseEditForm">
+              <input name="originalName" type="hidden" />
+              <label><span>案件名稱</span><input name="name" type="text" required /></label>
+              <label><span>案件模式</span><select name="mode" required><option value="master_lease">包租代管</option><option value="agency_management">代租代管</option></select></label>
+              <label><span>房東</span><input name="landlord" type="text" required /></label>
+              <label><span>月收入</span><input name="income" type="number" min="0" required /></label>
+              <label><span>月支出</span><input name="expense" type="number" min="0" required /></label>
+              <label><span>公司投入</span><input name="companyInvestment" type="number" min="0" required /></label>
+              <button class="primary-button" type="submit">儲存案件</button>
+              <button class="ghost-button" id="cancelCaseEdit" type="button">取消</button>
+              <p class="form-note" id="caseEditNote">點選案件列表的編輯後，資料會帶入這裡。</p>
+            </form>
+          </section>
+
           <div class="table-panel">
             <table>
               <thead><tr><th>案件</th><th>模式</th><th>房東</th><th>月收入</th><th>月支出</th><th>公司投入</th><th>ROI</th><th>狀態</th><th>操作</th></tr></thead>
@@ -145,7 +161,23 @@
           </div>
         </section>
 
-        <section class="view" id="properties"><div class="property-grid" id="propertyGrid"></div></section>
+        <section class="view" id="properties">
+          <section class="panel action-panel edit-panel" id="propertyEditPanel">
+            <div class="panel-heading"><div><p class="eyebrow">編輯</p><h2>編輯物件資料</h2></div></div>
+            <form class="form-grid" id="propertyEditForm">
+              <input name="originalName" type="hidden" />
+              <label><span>物件名稱</span><input name="name" type="text" required /></label>
+              <label><span>格局</span><input name="layout" type="text" placeholder="2 房 1 廳" required /></label>
+              <label><span>模式</span><select name="mode" required><option>包租代管</option><option>代租代管</option></select></label>
+              <label><span>狀態</span><select name="status" required><option>已出租</option><option>招租中</option><option>修繕中</option><option>空置</option></select></label>
+              <label><span>格局圖</span><input name="floorPlan" type="text" required /></label>
+              <button class="primary-button" type="submit">儲存物件</button>
+              <button class="ghost-button" id="cancelPropertyEdit" type="button">取消</button>
+              <p class="form-note" id="propertyEditNote">點選物件卡片的編輯後，資料會帶入這裡。</p>
+            </form>
+          </section>
+          <div class="property-grid" id="propertyGrid"></div>
+        </section>
 
         <section class="view" id="finance">
           <div class="content-grid">

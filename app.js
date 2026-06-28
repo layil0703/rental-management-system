@@ -15,6 +15,7 @@ const storageKeys = {
   transactions: "rental_admin_transactions_v1",
   repairs: "rental_admin_repairs_v1",
   assets: "rental_admin_assets_v1",
+  properties: "rental_admin_properties_v1",
 };
 
 const defaultCases = [
@@ -37,13 +38,13 @@ const defaultTransactions = [
   { date: "2026-06-26", caseName: "板橋 B2", type: "income", typeLabel: "收入", category: "管理費", amount: 6200, note: "代租代管" },
 ];
 
-const properties = [
-  ["信義 A3", "2 房 1 廳", "包租代管", "已出租", "主要格局圖 2 張"],
-  ["大安 2A", "套房", "包租代管", "已出租", "類 3D 圖待更新"],
-  ["板橋 B2", "3 房 2 廳", "代租代管", "招租中", "家具配置圖 1 張"],
-  ["中山 5F", "雅房", "包租代管", "修繕中", "水電圖待補"],
-  ["三重 C1", "整層", "代租代管", "已出租", "平面圖 1 張"],
-  ["松山 8B", "2 房 1 廳", "包租代管", "空置", "尚未上傳"],
+const defaultProperties = [
+  { name: "信義 A3", layout: "2 房 1 廳", mode: "包租代管", status: "已出租", floorPlan: "主要格局圖 2 張" },
+  { name: "大安 2A", layout: "套房", mode: "包租代管", status: "已出租", floorPlan: "類 3D 圖待更新" },
+  { name: "板橋 B2", layout: "3 房 2 廳", mode: "代租代管", status: "招租中", floorPlan: "家具配置圖 1 張" },
+  { name: "中山 5F", layout: "雅房", mode: "包租代管", status: "修繕中", floorPlan: "水電圖待補" },
+  { name: "三重 C1", layout: "整層", mode: "代租代管", status: "已出租", floorPlan: "平面圖 1 張" },
+  { name: "松山 8B", layout: "2 房 1 廳", mode: "包租代管", status: "空置", floorPlan: "尚未上傳" },
 ];
 
 const defaultAssets = [
@@ -69,6 +70,7 @@ let floorPlans = loadStoredArray(storageKeys.floorPlans, defaultFloorPlans);
 let transactions = loadStoredArray(storageKeys.transactions, defaultTransactions);
 let repairs = loadStoredArray(storageKeys.repairs, defaultRepairs);
 let assets = loadStoredArray(storageKeys.assets, defaultAssets);
+let properties = loadStoredArray(storageKeys.properties, defaultProperties);
 
 const formatMoney = (amount) =>
   new Intl.NumberFormat("zh-TW", { style: "currency", currency: "TWD", maximumFractionDigits: 0 }).format(amount);
@@ -84,6 +86,16 @@ function statusClass(value) {
 }
 
 function editRecord(type, name) {
+  if (type === "case") {
+    startCaseEdit(name);
+    return;
+  }
+
+  if (type === "property") {
+    startPropertyEdit(name);
+    return;
+  }
+
   const labels = {
     case: "案件",
     property: "物件",
@@ -92,6 +104,37 @@ function editRecord(type, name) {
     repair: "修繕",
   };
   window.alert(`${labels[type] || "資料"}「${name}」的編輯入口已預留；正式版會開啟可儲存的編輯表單。`);
+}
+
+function startCaseEdit(name) {
+  const item = cases.find((caseItem) => normalizeName(caseItem.name) === normalizeName(name));
+  if (!item) return;
+  setView("cases");
+  const form = document.getElementById("caseEditForm");
+  form.originalName.value = item.name;
+  form.name.value = item.name;
+  form.mode.value = item.mode;
+  form.landlord.value = item.landlord;
+  form.income.value = item.income;
+  form.expense.value = item.expense;
+  form.companyInvestment.value = item.companyInvestment || 0;
+  document.getElementById("caseEditNote").textContent = `正在編輯：${item.name}`;
+  document.getElementById("caseEditPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function startPropertyEdit(name) {
+  const item = properties.find((property) => normalizeName(property.name) === normalizeName(name));
+  if (!item) return;
+  setView("properties");
+  const form = document.getElementById("propertyEditForm");
+  form.originalName.value = item.name;
+  form.name.value = item.name;
+  form.layout.value = item.layout;
+  form.mode.value = item.mode;
+  form.status.value = item.status;
+  form.floorPlan.value = item.floorPlan;
+  document.getElementById("propertyEditNote").textContent = `正在編輯：${item.name}`;
+  document.getElementById("propertyEditPanel").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function selectLayoutItem(item) {
@@ -291,6 +334,7 @@ function saveState() {
   localStorage.setItem(storageKeys.transactions, JSON.stringify(transactions));
   localStorage.setItem(storageKeys.repairs, JSON.stringify(repairs));
   localStorage.setItem(storageKeys.assets, JSON.stringify(assets));
+  localStorage.setItem(storageKeys.properties, JSON.stringify(properties));
 }
 
 function getRepairStatusLabel(status) {
@@ -457,16 +501,16 @@ function renderCaseTable(filter = activeFilter, keyword = "") {
 
 function renderProperties() {
   document.getElementById("propertyGrid").innerHTML = properties
-    .map(([name, layout, mode, status, floorPlan]) => `
+    .map((item) => `
       <article class="property-card">
-        <h3>${name}</h3>
-        <small>${layout}</small>
+        <h3>${item.name}</h3>
+        <small>${item.layout}</small>
         <div class="card-meta">
-          <div><span>模式</span><strong>${mode}</strong></div>
-          <div><span>狀態</span><strong class="badge ${statusClass(status)}">${status}</strong></div>
-          <div><span>格局圖</span><strong>${floorPlan}</strong></div>
+          <div><span>模式</span><strong>${item.mode}</strong></div>
+          <div><span>狀態</span><strong class="badge ${statusClass(item.status)}">${item.status}</strong></div>
+          <div><span>格局圖</span><strong>${item.floorPlan}</strong></div>
         </div>
-        <button class="mini-button card-action" onclick="editRecord('property', '${name}')">編輯</button>
+        <button class="mini-button card-action" onclick="editRecord('property', '${item.name}')">編輯</button>
       </article>
     `)
     .join("");
@@ -694,6 +738,94 @@ function bindEvents() {
     renderDashboardMetrics();
     document.getElementById("investmentFormNote").textContent = `${caseName} 公司投入已更新為 ${formatMoney(companyInvestment)}。`;
     event.currentTarget.reset();
+  });
+
+  document.getElementById("caseEditForm").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const originalName = form.originalName.value;
+    const targetCase = cases.find((item) => normalizeName(item.name) === normalizeName(originalName));
+    if (!targetCase) {
+      document.getElementById("caseEditNote").textContent = "找不到要編輯的案件，請重新點選編輯。";
+      return;
+    }
+
+    const newName = form.name.value.trim();
+    targetCase.name = newName;
+    targetCase.mode = form.mode.value;
+    targetCase.modeLabel = getModeLabel(form.mode.value);
+    targetCase.landlord = form.landlord.value.trim();
+    targetCase.income = Number(form.income.value);
+    targetCase.expense = Number(form.expense.value);
+    targetCase.companyInvestment = Number(form.companyInvestment.value);
+    targetCase.investmentSource = "manual";
+
+    if (normalizeName(originalName) !== normalizeName(newName)) {
+      transactions.forEach((item) => {
+        if (normalizeName(item.caseName) === normalizeName(originalName)) item.caseName = newName;
+      });
+      repairs.forEach((item) => {
+        if (normalizeName(item.caseName) === normalizeName(originalName)) item.caseName = newName;
+      });
+      assets.forEach((item) => {
+        if (normalizeName(item.propertyName) === normalizeName(originalName)) item.propertyName = newName;
+      });
+      floorPlans.forEach((item) => {
+        if (normalizeName(item.title).includes(normalizeName(originalName))) item.title = item.title.replace(originalName, newName);
+      });
+    }
+
+    saveState();
+    renderDashboardMetrics();
+    renderRoiList();
+    renderCaseTable(activeFilter, document.getElementById("caseSearch").value);
+    renderTransactions();
+    renderAssets();
+    renderRepairs();
+    renderFloorPlans();
+    renderSnapshots();
+    document.getElementById("caseEditNote").textContent = `${newName} 已儲存。`;
+  });
+
+  document.getElementById("cancelCaseEdit").addEventListener("click", () => {
+    document.getElementById("caseEditForm").reset();
+    document.getElementById("caseEditNote").textContent = "已取消編輯。";
+  });
+
+  document.getElementById("propertyEditForm").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const originalName = form.originalName.value;
+    const targetProperty = properties.find((item) => normalizeName(item.name) === normalizeName(originalName));
+    if (!targetProperty) {
+      document.getElementById("propertyEditNote").textContent = "找不到要編輯的物件，請重新點選編輯。";
+      return;
+    }
+
+    const newName = form.name.value.trim();
+    targetProperty.name = newName;
+    targetProperty.layout = form.layout.value.trim();
+    targetProperty.mode = form.mode.value;
+    targetProperty.status = form.status.value;
+    targetProperty.floorPlan = form.floorPlan.value.trim();
+
+    if (normalizeName(originalName) !== normalizeName(newName)) {
+      assets.forEach((item) => {
+        if (normalizeName(item.propertyName) === normalizeName(originalName)) item.propertyName = newName;
+      });
+    }
+
+    saveState();
+    renderProperties();
+    renderAssets();
+    renderSnapshots();
+    renderDashboardMetrics();
+    document.getElementById("propertyEditNote").textContent = `${newName} 已儲存。`;
+  });
+
+  document.getElementById("cancelPropertyEdit").addEventListener("click", () => {
+    document.getElementById("propertyEditForm").reset();
+    document.getElementById("propertyEditNote").textContent = "已取消編輯。";
   });
 
   document.getElementById("transactionForm").addEventListener("submit", (event) => {
