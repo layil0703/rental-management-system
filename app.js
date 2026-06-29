@@ -16,6 +16,7 @@ const storageKeys = {
   repairs: "rental_admin_repairs_v1",
   assets: "rental_admin_assets_v1",
   properties: "rental_admin_properties_v1",
+  layoutItems: "rental_admin_layout_items_v1",
 };
 
 const defaultCases = [
@@ -244,6 +245,91 @@ function setLayoutItemLabel(item, label) {
   ensureResizeHandle(item);
 }
 
+function getLayoutItemType(item) {
+  if (!item) return "room";
+  if (item.classList.contains("single-bed")) return "single-bed";
+  if (item.classList.contains("double-bed")) return "double-bed";
+  if (item.classList.contains("desk")) return "desk";
+  if (item.classList.contains("cabinet")) return "cabinet";
+  if (item.classList.contains("door")) return "door";
+  if (item.classList.contains("window")) return "window";
+  return "room";
+}
+
+function getLayoutItemConfig(type) {
+  return {
+    "single-bed": { label: "單人床", className: "furniture-item single-bed", width: 68, height: 38 },
+    "double-bed": { label: "雙人床", className: "furniture-item double-bed", width: 92, height: 48 },
+    desk: { label: "桌子", className: "furniture-item desk", width: 62, height: 42 },
+    cabinet: { label: "櫃子", className: "furniture-item cabinet", width: 52, height: 72 },
+    door: { label: "門口", className: "opening-item door", width: 56, height: 18 },
+    window: { label: "窗戶", className: "opening-item window", width: 90, height: 16 },
+    room: { label: "房間", className: "room layout-room", width: 150, height: 110 },
+  }[type] || { label: "房間", className: "room layout-room", width: 150, height: 110 };
+}
+
+function buildLayoutItem(type, label) {
+  const config = getLayoutItemConfig(type);
+  const item = document.createElement("button");
+  item.type = "button";
+  item.className = `layout-item ${config.className}`;
+  item.textContent = label || config.label;
+  item.style.width = `${config.width}px`;
+  item.style.height = `${config.height}px`;
+  item.dataset.layoutKind = type === "door" || type === "window" ? "opening" : type === "room" ? "room" : "furniture";
+  item.dataset.layoutType = type;
+  item.dataset.layoutLabel = label || config.label;
+  return item;
+}
+
+function getCurrentLayoutState() {
+  return Array.from(document.querySelectorAll(".fake-plan .layout-item")).map((item) => ({
+    type: item.dataset.layoutType || getLayoutItemType(item),
+    label: getLayoutItemLabel(item),
+    left: item.style.left,
+    top: item.style.top,
+    width: item.style.width,
+    height: item.style.height,
+    rotation: item.dataset.rotation || "0",
+  }));
+}
+
+function saveLayoutState() {
+  localStorage.setItem(storageKeys.layoutItems, JSON.stringify(getCurrentLayoutState()));
+}
+
+function restoreLayoutState() {
+  const plan = document.querySelector(".fake-plan");
+  if (!plan) return;
+
+  const stored = localStorage.getItem(storageKeys.layoutItems);
+  if (!stored) {
+    Array.from(plan.querySelectorAll(".layout-item")).forEach((item) => {
+      const type = getLayoutItemType(item);
+      item.dataset.layoutType = type;
+      item.dataset.layoutLabel = getLayoutItemLabel(item);
+    });
+    return;
+  }
+
+  try {
+    const items = JSON.parse(stored);
+    plan.querySelectorAll(".layout-item").forEach((item) => item.remove());
+    items.forEach((storedItem) => {
+      const item = buildLayoutItem(storedItem.type, storedItem.label);
+      item.style.left = storedItem.left || "8%";
+      item.style.top = storedItem.top || "8%";
+      item.style.width = storedItem.width || item.style.width;
+      item.style.height = storedItem.height || item.style.height;
+      item.dataset.rotation = storedItem.rotation || "0";
+      item.style.transform = `rotate(${item.dataset.rotation}deg)`;
+      plan.appendChild(item);
+    });
+  } catch {
+    localStorage.removeItem(storageKeys.layoutItems);
+  }
+}
+
 function updateLayoutToolbar() {
   const label = document.getElementById("selectedLayoutLabel");
   const nameInput = document.getElementById("layoutNameInput");
@@ -265,6 +351,7 @@ function renameSelectedLayout() {
   if (!selectedLayoutItem || !nameInput) return;
   setLayoutItemLabel(selectedLayoutItem, nameInput.value);
   updateLayoutToolbar();
+  saveLayoutState();
 }
 
 function rotateSelectedLayout(degrees) {
@@ -273,6 +360,7 @@ function rotateSelectedLayout(degrees) {
   const next = (current + degrees) % 360;
   selectedLayoutItem.dataset.rotation = String(next);
   selectedLayoutItem.style.transform = `rotate(${next}deg)`;
+  saveLayoutState();
 }
 
 function deleteSelectedLayout() {
@@ -280,6 +368,7 @@ function deleteSelectedLayout() {
   selectedLayoutItem.remove();
   selectedLayoutItem = null;
   updateLayoutToolbar();
+  saveLayoutState();
 }
 
 function replaceFloorPlanWithImage(file) {
@@ -293,6 +382,7 @@ function replaceFloorPlanWithImage(file) {
     plan.style.backgroundImage = `url("${reader.result}")`;
     selectedLayoutItem = null;
     updateLayoutToolbar();
+    saveLayoutState();
   });
   reader.readAsDataURL(file);
   return true;
@@ -302,32 +392,14 @@ function createLayoutObject(type, customLabel = "") {
   const plan = document.querySelector(".fake-plan");
   if (!plan) return;
 
-  const config = {
-    "single-bed": { label: "單人床", className: "furniture-item single-bed", width: 68, height: 38 },
-    "double-bed": { label: "雙人床", className: "furniture-item double-bed", width: 92, height: 48 },
-    desk: { label: "桌子", className: "furniture-item desk", width: 62, height: 42 },
-    cabinet: { label: "櫃子", className: "furniture-item cabinet", width: 52, height: 72 },
-    door: { label: "門口", className: "opening-item door", width: 56, height: 18 },
-    window: { label: "窗戶", className: "opening-item window", width: 90, height: 16 },
-    room: { label: "房間", className: "room layout-room", width: 150, height: 110 },
-  }[type];
-
-  if (!config) return;
-
-  const item = document.createElement("button");
-  item.type = "button";
-  item.className = `layout-item ${config.className}`;
-  item.textContent = customLabel || config.label;
+  const item = buildLayoutItem(type, customLabel);
   item.style.left = "8%";
   item.style.top = "8%";
-  item.style.width = `${config.width}px`;
-  item.style.height = `${config.height}px`;
-  item.dataset.layoutKind = type === "door" || type === "window" ? "opening" : type === "room" ? "room" : "furniture";
-  item.dataset.layoutLabel = customLabel || config.label;
   plan.appendChild(item);
   ensureResizeHandle(item);
   enableLayoutDragging(item);
   selectLayoutItem(item);
+  saveLayoutState();
 }
 
 function ensureResizeHandle(item) {
@@ -356,6 +428,7 @@ function ensureResizeHandle(item) {
       handle.removeEventListener("pointermove", resizeItem);
       handle.removeEventListener("pointerup", stopResize);
       handle.removeEventListener("pointercancel", stopResize);
+      saveLayoutState();
     };
 
     handle.addEventListener("pointermove", resizeItem);
@@ -400,6 +473,7 @@ function enableLayoutDragging(targetItem) {
         item.removeEventListener("pointermove", moveItem);
         item.removeEventListener("pointerup", stopDrag);
         item.removeEventListener("pointercancel", stopDrag);
+        saveLayoutState();
       };
 
       item.addEventListener("pointermove", moveItem);
@@ -1329,6 +1403,7 @@ renderTransactions();
 renderReferenceOptions();
 setDefaultFormValues();
 bindEvents();
+restoreLayoutState();
 enableLayoutDragging();
 updateLayoutToolbar();
 
