@@ -551,6 +551,99 @@ function saveState() {
   localStorage.setItem(storageKeys.properties, JSON.stringify(properties));
 }
 
+function getBackupPayload() {
+  return {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    data: {
+      cases,
+      floorPlans,
+      transactions,
+      repairs,
+      assets,
+      properties,
+      layoutItems: getCurrentLayoutState(),
+    },
+  };
+}
+
+function downloadJson(filename, payload) {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function exportBackupData() {
+  downloadJson(`rental-admin-backup-${new Date().toISOString().slice(0, 10)}.json`, getBackupPayload());
+}
+
+function isBackupPayload(payload) {
+  const data = payload?.data;
+  return Boolean(data)
+    && Array.isArray(data.cases)
+    && Array.isArray(data.floorPlans)
+    && Array.isArray(data.transactions)
+    && Array.isArray(data.repairs)
+    && Array.isArray(data.assets)
+    && Array.isArray(data.properties);
+}
+
+function applyBackupPayload(payload) {
+  if (!isBackupPayload(payload)) {
+    window.alert("匯入失敗：這不是有效的租管後台備份檔。");
+    return false;
+  }
+
+  const confirmed = window.confirm("確定匯入備份？目前本機資料會被備份檔覆蓋。");
+  if (!confirmed) return false;
+
+  cases = normalizeCases(payload.data.cases);
+  floorPlans = payload.data.floorPlans;
+  transactions = payload.data.transactions;
+  repairs = payload.data.repairs;
+  assets = payload.data.assets;
+  properties = payload.data.properties;
+  saveState();
+
+  if (Array.isArray(payload.data.layoutItems)) {
+    localStorage.setItem(storageKeys.layoutItems, JSON.stringify(payload.data.layoutItems));
+  } else {
+    localStorage.removeItem(storageKeys.layoutItems);
+  }
+
+  selectedLayoutItem = null;
+  restoreLayoutState();
+  enableLayoutDragging();
+  updateLayoutToolbar();
+  refreshAllViews();
+  setDefaultFormValues();
+  window.alert("備份已匯入完成。");
+  return true;
+}
+
+function importBackupData(fileInput) {
+  const file = fileInput.files?.[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.addEventListener("load", () => {
+    try {
+      applyBackupPayload(JSON.parse(reader.result));
+    } catch {
+      window.alert("匯入失敗：JSON 檔案格式無法解析。");
+    } finally {
+      fileInput.value = "";
+    }
+  });
+  reader.readAsText(file);
+}
+
 function getRepairStatusLabel(status) {
   const labels = {
     reported: "已通報",
@@ -950,6 +1043,8 @@ function bindEvents() {
   });
 
   document.getElementById("exportButton").addEventListener("click", exportAllData);
+  document.getElementById("backupButton").addEventListener("click", exportBackupData);
+  document.getElementById("restoreInput").addEventListener("change", (event) => importBackupData(event.currentTarget));
 
   document.getElementById("layoutObjectForm").addEventListener("submit", (event) => {
     event.preventDefault();
