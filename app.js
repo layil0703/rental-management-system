@@ -627,6 +627,29 @@ function applyBackupPayload(payload) {
   return true;
 }
 
+function resetDemoData() {
+  const confirmed = window.confirm("確定重置示範資料？目前本機資料會被清除，建議先按「備份資料」保存。");
+  if (!confirmed) return;
+
+  Object.values(storageKeys).forEach((key) => localStorage.removeItem(key));
+  cases = normalizeCases(defaultCases);
+  floorPlans = [...defaultFloorPlans];
+  transactions = [...defaultTransactions];
+  repairs = [...defaultRepairs];
+  assets = [...defaultAssets];
+  properties = [...defaultProperties];
+  selectedLayoutItem = null;
+
+  renderLayoutState(defaultLayoutState);
+  saveState();
+  saveLayoutState();
+  enableLayoutDragging();
+  updateLayoutToolbar();
+  refreshAllViews();
+  setDefaultFormValues();
+  window.alert("已重置為示範資料。");
+}
+
 function importBackupData(fileInput) {
   const file = fileInput.files?.[0];
   if (!file) return;
@@ -1045,6 +1068,7 @@ function bindEvents() {
   document.getElementById("exportButton").addEventListener("click", exportAllData);
   document.getElementById("backupButton").addEventListener("click", exportBackupData);
   document.getElementById("restoreInput").addEventListener("change", (event) => importBackupData(event.currentTarget));
+  document.getElementById("resetDataButton").addEventListener("click", resetDemoData);
 
   document.getElementById("layoutObjectForm").addEventListener("submit", (event) => {
     event.preventDefault();
