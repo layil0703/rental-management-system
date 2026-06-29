@@ -77,6 +77,7 @@ const formatMoney = (amount) =>
   new Intl.NumberFormat("zh-TW", { style: "currency", currency: "TWD", maximumFractionDigits: 0 }).format(amount);
 
 let selectedLayoutItem = null;
+let defaultLayoutState = [];
 
 function statusClass(value) {
   const normalized = String(value || "").toLowerCase();
@@ -298,6 +299,27 @@ function saveLayoutState() {
   localStorage.setItem(storageKeys.layoutItems, JSON.stringify(getCurrentLayoutState()));
 }
 
+function renderLayoutState(items) {
+  const plan = document.querySelector(".fake-plan");
+  if (!plan) return;
+
+  plan.querySelectorAll(".layout-item").forEach((item) => item.remove());
+  items.forEach((storedItem) => {
+    const item = buildLayoutItem(storedItem.type, storedItem.label);
+    item.style.left = storedItem.left || "8%";
+    item.style.top = storedItem.top || "8%";
+    item.style.width = storedItem.width || item.style.width;
+    item.style.height = storedItem.height || item.style.height;
+    item.dataset.rotation = storedItem.rotation || "0";
+    item.style.transform = `rotate(${item.dataset.rotation}deg)`;
+    plan.appendChild(item);
+  });
+}
+
+function captureDefaultLayoutState() {
+  defaultLayoutState = getCurrentLayoutState();
+}
+
 function restoreLayoutState() {
   const plan = document.querySelector(".fake-plan");
   if (!plan) return;
@@ -314,20 +336,22 @@ function restoreLayoutState() {
 
   try {
     const items = JSON.parse(stored);
-    plan.querySelectorAll(".layout-item").forEach((item) => item.remove());
-    items.forEach((storedItem) => {
-      const item = buildLayoutItem(storedItem.type, storedItem.label);
-      item.style.left = storedItem.left || "8%";
-      item.style.top = storedItem.top || "8%";
-      item.style.width = storedItem.width || item.style.width;
-      item.style.height = storedItem.height || item.style.height;
-      item.dataset.rotation = storedItem.rotation || "0";
-      item.style.transform = `rotate(${item.dataset.rotation}deg)`;
-      plan.appendChild(item);
-    });
+    renderLayoutState(items);
   } catch {
     localStorage.removeItem(storageKeys.layoutItems);
   }
+}
+
+function resetLayoutToDefault() {
+  const confirmed = window.confirm("確定還原預設格局？目前移動、縮放、旋轉與改名的配置會被清除。");
+  if (!confirmed) return;
+
+  selectedLayoutItem = null;
+  localStorage.removeItem(storageKeys.layoutItems);
+  renderLayoutState(defaultLayoutState);
+  enableLayoutDragging();
+  updateLayoutToolbar();
+  saveLayoutState();
 }
 
 function updateLayoutToolbar() {
@@ -943,6 +967,7 @@ function bindEvents() {
       renameSelectedLayout();
     }
   });
+  document.getElementById("resetLayoutButton").addEventListener("click", resetLayoutToDefault);
   document.getElementById("deleteLayoutButton").addEventListener("click", deleteSelectedLayout);
 
   document.getElementById("investmentForm").addEventListener("submit", (event) => {
@@ -1403,6 +1428,7 @@ renderTransactions();
 renderReferenceOptions();
 setDefaultFormValues();
 bindEvents();
+captureDefaultLayoutState();
 restoreLayoutState();
 enableLayoutDragging();
 updateLayoutToolbar();
