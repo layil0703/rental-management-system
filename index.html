@@ -223,6 +223,22 @@
               </table>
             </div>
           </section>
+
+          <section class="panel action-panel edit-panel" id="transactionEditPanel">
+            <div class="panel-heading"><div><p class="eyebrow">編輯</p><h2>編輯收支紀錄</h2></div></div>
+            <form class="form-grid" id="transactionEditForm">
+              <input name="index" type="hidden" />
+              <label><span>所屬案件</span><input name="caseName" type="text" required /></label>
+              <label><span>類型</span><select name="type" required><option value="income">收入</option><option value="expense">支出</option><option value="payout">房東撥款</option><option value="reimbursement">代墊回收</option></select></label>
+              <label><span>項目</span><input name="category" type="text" required /></label>
+              <label><span>金額</span><input name="amount" type="number" min="0" required /></label>
+              <label><span>日期</span><input name="date" type="date" required /></label>
+              <label><span>備註</span><input name="note" type="text" /></label>
+              <button class="primary-button" type="submit">儲存收支</button>
+              <button class="ghost-button" id="cancelTransactionEdit" type="button">取消</button>
+              <p class="form-note" id="transactionEditNote">點選收支明細的編輯後，資料會帶入這裡。</p>
+            </form>
+          </section>
         </section>
 
                 <section class="view" id="assets">
@@ -237,6 +253,21 @@
               <label><span>出資方</span><select name="paidBy" required><option value="公司">公司</option><option value="房東">房東</option><option value="房客">房客</option><option value="共同分攤">共同分攤</option></select></label>
               <button class="primary-button" type="submit">新增投入</button>
               <p class="form-note" id="assetFormNote">新增後會自動計算每月折舊，並保存到本機。</p>
+            </form>
+          </section>
+          <section class="panel action-panel edit-panel" id="assetEditPanel">
+            <div class="panel-heading"><div><p class="eyebrow">編輯</p><h2>編輯家電 / 前置投入</h2></div></div>
+            <form class="form-grid" id="assetEditForm">
+              <input name="index" type="hidden" />
+              <label><span>所屬物件</span><input name="propertyName" type="text" required /></label>
+              <label><span>品項名稱</span><input name="assetName" type="text" required /></label>
+              <label><span>類別</span><select name="category" required><option value="家電">家電</option><option value="家具">家具</option><option value="裝修">裝修</option><option value="清潔">清潔</option><option value="其他">其他</option></select></label>
+              <label><span>投入金額</span><input name="amount" type="number" min="0" required /></label>
+              <label><span>攤提月數</span><input name="months" type="number" min="1" required /></label>
+              <label><span>出資方</span><select name="paidBy" required><option>公司</option><option>房東</option><option>房客</option><option>共同分攤</option></select></label>
+              <button class="primary-button" type="submit">儲存投入</button>
+              <button class="ghost-button" id="cancelAssetEdit" type="button">取消</button>
+              <p class="form-note" id="assetEditNote">點選家電卡片的編輯後，資料會帶入這裡。</p>
             </form>
           </section>
           <div class="asset-grid" id="assetGrid"></div>
@@ -328,6 +359,21 @@
               <label><span>格局圖位置</span><input name="location" type="text" placeholder="例如：主臥冷氣旁" /></label>
               <button class="primary-button" type="submit">新增工單</button>
               <p class="form-note" id="repairFormNote">之後可再連結格局圖標記與收支支出。</p>
+            </form>
+          </section>
+          <section class="panel action-panel edit-panel" id="repairEditPanel">
+            <div class="panel-heading"><div><p class="eyebrow">編輯</p><h2>編輯修繕工單</h2></div></div>
+            <form class="form-grid" id="repairEditForm">
+              <input name="index" type="hidden" />
+              <label><span>所屬案件</span><input name="caseName" type="text" required /></label>
+              <label><span>修繕標題</span><input name="title" type="text" required /></label>
+              <label><span>狀態</span><select name="status" required><option value="reported">已通報</option><option value="reviewing">審核中</option><option value="scheduled">已排程</option><option value="completed">已完成</option></select></label>
+              <label><span>優先</span><select name="priority" required><option value="normal">一般</option><option value="urgent">緊急</option><option value="high">高</option><option value="low">低</option></select></label>
+              <label><span>預估金額</span><input name="cost" type="number" min="0" required /></label>
+              <label><span>格局圖位置</span><input name="location" type="text" /></label>
+              <button class="primary-button" type="submit">儲存修繕</button>
+              <button class="ghost-button" id="cancelRepairEdit" type="button">取消</button>
+              <p class="form-note" id="repairEditNote">點選修繕卡片的編輯後，資料會帶入這裡。</p>
             </form>
           </section>
           <div class="repair-board" id="repairBoard"></div>

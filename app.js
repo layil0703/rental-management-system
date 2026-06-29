@@ -96,6 +96,21 @@ function editRecord(type, name) {
     return;
   }
 
+  if (type === "transaction") {
+    startTransactionEdit(name);
+    return;
+  }
+
+  if (type === "asset") {
+    startAssetEdit(name);
+    return;
+  }
+
+  if (type === "repair") {
+    startRepairEdit(name);
+    return;
+  }
+
   const labels = {
     case: "案件",
     property: "物件",
@@ -104,6 +119,66 @@ function editRecord(type, name) {
     repair: "修繕",
   };
   window.alert(`${labels[type] || "資料"}「${name}」的編輯入口已預留；正式版會開啟可儲存的編輯表單。`);
+}
+
+function startTransactionEdit(key) {
+  const index = Number.isInteger(Number(key))
+    ? Number(key)
+    : transactions.findIndex((item) => `${item.caseName} / ${item.category}` === key);
+  if (index < 0) return;
+  const item = transactions[index];
+  if (!item) return;
+  setView("finance");
+  const form = document.getElementById("transactionEditForm");
+  form.index.value = String(index);
+  form.caseName.value = item.caseName;
+  form.type.value = item.type;
+  form.category.value = item.category;
+  form.amount.value = item.amount;
+  form.date.value = item.date;
+  form.note.value = item.note || "";
+  document.getElementById("transactionEditNote").textContent = `正在編輯：${item.caseName} / ${item.category}`;
+  document.getElementById("transactionEditPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function startAssetEdit(name) {
+  const index = Number.isInteger(Number(name))
+    ? Number(name)
+    : assets.findIndex((item) => item.assetName === name);
+  if (index < 0) return;
+  const item = assets[index];
+  if (!item) return;
+  setView("assets");
+  const form = document.getElementById("assetEditForm");
+  form.index.value = String(index);
+  form.propertyName.value = item.propertyName;
+  form.assetName.value = item.assetName;
+  form.category.value = item.category;
+  form.amount.value = item.amount;
+  form.months.value = item.months;
+  form.paidBy.value = item.paidBy;
+  document.getElementById("assetEditNote").textContent = `正在編輯：${item.assetName}`;
+  document.getElementById("assetEditPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function startRepairEdit(title) {
+  const index = Number.isInteger(Number(title))
+    ? Number(title)
+    : repairs.findIndex((item) => item.title === title);
+  if (index < 0) return;
+  const item = repairs[index];
+  if (!item) return;
+  setView("repairs");
+  const form = document.getElementById("repairEditForm");
+  form.index.value = String(index);
+  form.caseName.value = item.caseName;
+  form.title.value = item.title;
+  form.status.value = item.status;
+  form.priority.value = item.priority;
+  form.cost.value = item.cost;
+  form.location.value = item.location || "";
+  document.getElementById("repairEditNote").textContent = `正在編輯：${item.title}`;
+  document.getElementById("repairEditPanel").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function startCaseEdit(name) {
@@ -521,7 +596,7 @@ function renderAssets() {
   const totalMonthly = assets.reduce((sum, item) => sum + item.monthly, 0);
   if (summary) summary.textContent = `每月折舊 ${formatMoney(totalMonthly)}`;
   document.getElementById("assetGrid").innerHTML = assets
-    .map((item) => `
+    .map((item, index) => `
       <article class="asset-card">
         <h3>${item.assetName}</h3>
         <small>${item.propertyName}</small>
@@ -532,7 +607,7 @@ function renderAssets() {
           <div><span>每月折舊</span><strong>${formatMoney(item.monthly)}</strong></div>
           <div><span>出資方</span><strong>${item.paidBy}</strong></div>
         </div>
-        <button class="mini-button card-action" onclick="editRecord('asset', '${item.assetName}')">編輯</button>
+        <button class="mini-button card-action" onclick="editRecord('asset', '${index}')">編輯</button>
       </article>
     `)
     .join("");
@@ -545,7 +620,7 @@ function renderRepairs() {
   const openCount = repairs.filter((item) => item.status !== "completed").length;
   if (summary) summary.textContent = `待處理 ${openCount} 筆`;
   board.innerHTML = repairs
-    .map((item) => `
+    .map((item, index) => `
       <article class="repair-card">
         <h3>${item.title}</h3>
         <small>${item.caseName}</small>
@@ -555,7 +630,7 @@ function renderRepairs() {
           <div><span>預估金額</span><strong>${formatMoney(item.cost)}</strong></div>
           <div><span>格局位置</span><strong>${item.location || "未標記"}</strong></div>
         </div>
-        <button class="mini-button card-action" onclick="editRecord('repair', '${item.title}')">編輯</button>
+        <button class="mini-button card-action" onclick="editRecord('repair', '${index}')">編輯</button>
       </article>
     `)
     .join("");
@@ -585,11 +660,13 @@ function renderTransactions() {
   const summary = document.getElementById("transactionSummary");
   if (!target || !summary) return;
 
-  const sorted = transactions.slice().sort((a, b) => b.date.localeCompare(a.date));
+  const sorted = transactions
+    .map((item, index) => ({ item, index }))
+    .sort((a, b) => b.item.date.localeCompare(a.item.date));
   const total = transactions.reduce((sum, item) => sum + signedTransactionAmount(item), 0);
   summary.textContent = `目前合計 ${formatMoney(total)}`;
   target.innerHTML = sorted
-    .map((item) => `
+    .map(({ item, index }) => `
       <tr>
         <td>${item.date}</td>
         <td><strong>${item.caseName}</strong></td>
@@ -597,7 +674,7 @@ function renderTransactions() {
         <td>${item.category}</td>
         <td>${formatMoney(signedTransactionAmount(item))}</td>
         <td>${item.note || "-"}</td>
-        <td><button class="mini-button" onclick="editRecord('transaction', '${item.caseName} / ${item.category}')">編輯</button></td>
+        <td><button class="mini-button" onclick="editRecord('transaction', '${index}')">編輯</button></td>
       </tr>
     `)
     .join("");
@@ -854,6 +931,35 @@ function bindEvents() {
     setDefaultFormValues();
   });
 
+  document.getElementById("transactionEditForm").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const index = Number(form.index.value);
+    if (!transactions[index]) return;
+    const type = form.type.value;
+    transactions[index] = {
+      date: form.date.value,
+      caseName: form.caseName.value.trim(),
+      type,
+      typeLabel: getTransactionTypeLabel(type),
+      category: form.category.value.trim(),
+      amount: Number(form.amount.value),
+      note: form.note.value,
+    };
+    saveState();
+    renderTransactions();
+    renderRoiList();
+    renderCaseTable(activeFilter, document.getElementById("caseSearch").value);
+    renderSnapshots();
+    renderDashboardMetrics();
+    document.getElementById("transactionEditNote").textContent = "收支紀錄已儲存。";
+  });
+
+  document.getElementById("cancelTransactionEdit").addEventListener("click", () => {
+    document.getElementById("transactionEditForm").reset();
+    document.getElementById("transactionEditNote").textContent = "已取消編輯。";
+  });
+
   document.getElementById("assetForm").addEventListener("submit", (event) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
@@ -886,6 +992,36 @@ function bindEvents() {
     event.currentTarget.reset();
   });
 
+  document.getElementById("assetEditForm").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const index = Number(form.index.value);
+    if (!assets[index]) return;
+    const amount = Number(form.amount.value);
+    const months = Number(form.months.value);
+    assets[index] = {
+      propertyName: form.propertyName.value.trim(),
+      assetName: form.assetName.value.trim(),
+      category: form.category.value,
+      amount,
+      months,
+      monthly: Math.round(amount / months),
+      paidBy: form.paidBy.value,
+    };
+    saveState();
+    renderAssets();
+    renderRoiList();
+    renderCaseTable(activeFilter, document.getElementById("caseSearch").value);
+    renderSnapshots();
+    renderDashboardMetrics();
+    document.getElementById("assetEditNote").textContent = "家電 / 前置投入已儲存。";
+  });
+
+  document.getElementById("cancelAssetEdit").addEventListener("click", () => {
+    document.getElementById("assetEditForm").reset();
+    document.getElementById("assetEditNote").textContent = "已取消編輯。";
+  });
+
   document.getElementById("repairForm").addEventListener("submit", (event) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
@@ -904,6 +1040,31 @@ function bindEvents() {
     renderRepairs();
     document.getElementById("repairFormNote").textContent = `${newRepair.caseName} 已新增修繕工單：${newRepair.title}。`;
     event.currentTarget.reset();
+  });
+
+  document.getElementById("repairEditForm").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const index = Number(form.index.value);
+    if (!repairs[index]) return;
+    const status = form.status.value;
+    repairs[index] = {
+      title: form.title.value.trim(),
+      caseName: form.caseName.value.trim(),
+      status,
+      statusLabel: getRepairStatusLabel(status),
+      priority: form.priority.value,
+      cost: Number(form.cost.value),
+      location: form.location.value,
+    };
+    saveState();
+    renderRepairs();
+    document.getElementById("repairEditNote").textContent = "修繕工單已儲存。";
+  });
+
+  document.getElementById("cancelRepairEdit").addEventListener("click", () => {
+    document.getElementById("repairEditForm").reset();
+    document.getElementById("repairEditNote").textContent = "已取消編輯。";
   });
 
   document.getElementById("addCaseButton").addEventListener("click", () => {
