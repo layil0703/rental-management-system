@@ -451,6 +451,18 @@ function signedTransactionAmount(item) {
   return -item.amount;
 }
 
+function refreshAllViews() {
+  renderDashboardMetrics();
+  renderRoiList();
+  renderCaseTable(activeFilter, document.getElementById("caseSearch").value);
+  renderProperties();
+  renderTransactions();
+  renderAssets();
+  renderRepairs();
+  renderFloorPlans();
+  renderSnapshots();
+}
+
 function getCaseFinancialSnapshot(caseItem) {
   const caseTransactions = transactions.filter((item) => item.caseName === caseItem.name);
   const transactionNet = caseTransactions.reduce((sum, item) => sum + signedTransactionAmount(item), 0);
@@ -869,6 +881,27 @@ function bindEvents() {
     document.getElementById("caseEditNote").textContent = "已取消編輯。";
   });
 
+  document.getElementById("deleteCaseEdit").addEventListener("click", () => {
+    const form = document.getElementById("caseEditForm");
+    const caseName = form.originalName.value;
+    const index = cases.findIndex((item) => normalizeName(item.name) === normalizeName(caseName));
+    if (index < 0) {
+      document.getElementById("caseEditNote").textContent = "請先從案件列表點選要刪除的案件。";
+      return;
+    }
+
+    const confirmed = window.confirm(`確定刪除「${cases[index].name}」？相關收支與修繕紀錄也會一起移除。`);
+    if (!confirmed) return;
+
+    cases.splice(index, 1);
+    transactions = transactions.filter((item) => normalizeName(item.caseName) !== normalizeName(caseName));
+    repairs = repairs.filter((item) => normalizeName(item.caseName) !== normalizeName(caseName));
+    saveState();
+    refreshAllViews();
+    form.reset();
+    document.getElementById("caseEditNote").textContent = `${caseName} 已刪除，相關收支與修繕已同步移除。`;
+  });
+
   document.getElementById("propertyEditForm").addEventListener("submit", (event) => {
     event.preventDefault();
     const form = event.currentTarget;
@@ -903,6 +936,26 @@ function bindEvents() {
   document.getElementById("cancelPropertyEdit").addEventListener("click", () => {
     document.getElementById("propertyEditForm").reset();
     document.getElementById("propertyEditNote").textContent = "已取消編輯。";
+  });
+
+  document.getElementById("deletePropertyEdit").addEventListener("click", () => {
+    const form = document.getElementById("propertyEditForm");
+    const propertyName = form.originalName.value;
+    const index = properties.findIndex((item) => normalizeName(item.name) === normalizeName(propertyName));
+    if (index < 0) {
+      document.getElementById("propertyEditNote").textContent = "請先從物件卡片點選要刪除的物件。";
+      return;
+    }
+
+    const confirmed = window.confirm(`確定刪除「${properties[index].name}」？相關家電 / 前置投入也會一起移除。`);
+    if (!confirmed) return;
+
+    properties.splice(index, 1);
+    assets = assets.filter((item) => normalizeName(item.propertyName) !== normalizeName(propertyName));
+    saveState();
+    refreshAllViews();
+    form.reset();
+    document.getElementById("propertyEditNote").textContent = `${propertyName} 已刪除，相關家電 / 前置投入已同步移除。`;
   });
 
   document.getElementById("transactionForm").addEventListener("submit", (event) => {
@@ -958,6 +1011,25 @@ function bindEvents() {
   document.getElementById("cancelTransactionEdit").addEventListener("click", () => {
     document.getElementById("transactionEditForm").reset();
     document.getElementById("transactionEditNote").textContent = "已取消編輯。";
+  });
+
+  document.getElementById("deleteTransactionEdit").addEventListener("click", () => {
+    const form = document.getElementById("transactionEditForm");
+    const index = Number(form.index.value);
+    if (!transactions[index]) {
+      document.getElementById("transactionEditNote").textContent = "請先從收支明細點選要刪除的紀錄。";
+      return;
+    }
+
+    const label = `${transactions[index].caseName} / ${transactions[index].category}`;
+    const confirmed = window.confirm(`確定刪除「${label}」這筆收支？`);
+    if (!confirmed) return;
+
+    transactions.splice(index, 1);
+    saveState();
+    refreshAllViews();
+    form.reset();
+    document.getElementById("transactionEditNote").textContent = `${label} 已刪除。`;
   });
 
   document.getElementById("assetForm").addEventListener("submit", (event) => {
@@ -1022,6 +1094,25 @@ function bindEvents() {
     document.getElementById("assetEditNote").textContent = "已取消編輯。";
   });
 
+  document.getElementById("deleteAssetEdit").addEventListener("click", () => {
+    const form = document.getElementById("assetEditForm");
+    const index = Number(form.index.value);
+    if (!assets[index]) {
+      document.getElementById("assetEditNote").textContent = "請先從家電卡片點選要刪除的投入。";
+      return;
+    }
+
+    const label = `${assets[index].propertyName} / ${assets[index].assetName}`;
+    const confirmed = window.confirm(`確定刪除「${label}」這筆家電 / 前置投入？`);
+    if (!confirmed) return;
+
+    assets.splice(index, 1);
+    saveState();
+    refreshAllViews();
+    form.reset();
+    document.getElementById("assetEditNote").textContent = `${label} 已刪除。`;
+  });
+
   document.getElementById("repairForm").addEventListener("submit", (event) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
@@ -1065,6 +1156,25 @@ function bindEvents() {
   document.getElementById("cancelRepairEdit").addEventListener("click", () => {
     document.getElementById("repairEditForm").reset();
     document.getElementById("repairEditNote").textContent = "已取消編輯。";
+  });
+
+  document.getElementById("deleteRepairEdit").addEventListener("click", () => {
+    const form = document.getElementById("repairEditForm");
+    const index = Number(form.index.value);
+    if (!repairs[index]) {
+      document.getElementById("repairEditNote").textContent = "請先從修繕卡片點選要刪除的工單。";
+      return;
+    }
+
+    const label = `${repairs[index].caseName} / ${repairs[index].title}`;
+    const confirmed = window.confirm(`確定刪除「${label}」這筆修繕工單？`);
+    if (!confirmed) return;
+
+    repairs.splice(index, 1);
+    saveState();
+    refreshAllViews();
+    form.reset();
+    document.getElementById("repairEditNote").textContent = `${label} 已刪除。`;
   });
 
   document.getElementById("addCaseButton").addEventListener("click", () => {
