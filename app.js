@@ -221,10 +221,50 @@ function selectLayoutItem(item) {
   updateLayoutToolbar();
 }
 
+function getLayoutItemLabel(item) {
+  if (!item) return "";
+  if (item.dataset.layoutLabel) return item.dataset.layoutLabel;
+  return Array.from(item.childNodes)
+    .filter((node) => node.nodeType === Node.TEXT_NODE)
+    .map((node) => node.textContent)
+    .join("")
+    .trim();
+}
+
+function setLayoutItemLabel(item, label) {
+  if (!item) return;
+  const nextLabel = label.trim();
+  if (!nextLabel) return;
+
+  item.dataset.layoutLabel = nextLabel;
+  Array.from(item.childNodes)
+    .filter((node) => node.nodeType === Node.TEXT_NODE)
+    .forEach((node) => node.remove());
+  item.insertBefore(document.createTextNode(nextLabel), item.firstChild);
+  ensureResizeHandle(item);
+}
+
 function updateLayoutToolbar() {
   const label = document.getElementById("selectedLayoutLabel");
+  const nameInput = document.getElementById("layoutNameInput");
+  const renameButton = document.getElementById("renameLayoutButton");
   if (!label) return;
-  label.textContent = selectedLayoutItem ? `已選取：${selectedLayoutItem.textContent.trim()}` : "尚未選取物件";
+  const selectedLabel = getLayoutItemLabel(selectedLayoutItem);
+  label.textContent = selectedLayoutItem ? `已選取：${selectedLabel}` : "尚未選取物件";
+  if (nameInput) {
+    nameInput.value = selectedLabel;
+    nameInput.disabled = !selectedLayoutItem;
+  }
+  if (renameButton) {
+    renameButton.disabled = !selectedLayoutItem;
+  }
+}
+
+function renameSelectedLayout() {
+  const nameInput = document.getElementById("layoutNameInput");
+  if (!selectedLayoutItem || !nameInput) return;
+  setLayoutItemLabel(selectedLayoutItem, nameInput.value);
+  updateLayoutToolbar();
 }
 
 function rotateSelectedLayout(degrees) {
@@ -283,6 +323,7 @@ function createLayoutObject(type, customLabel = "") {
   item.style.width = `${config.width}px`;
   item.style.height = `${config.height}px`;
   item.dataset.layoutKind = type === "door" || type === "window" ? "opening" : type === "room" ? "room" : "furniture";
+  item.dataset.layoutLabel = customLabel || config.label;
   plan.appendChild(item);
   ensureResizeHandle(item);
   enableLayoutDragging(item);
@@ -821,6 +862,13 @@ function bindEvents() {
 
   document.getElementById("rotate90Button").addEventListener("click", () => rotateSelectedLayout(90));
   document.getElementById("rotate180Button").addEventListener("click", () => rotateSelectedLayout(180));
+  document.getElementById("renameLayoutButton").addEventListener("click", renameSelectedLayout);
+  document.getElementById("layoutNameInput").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      renameSelectedLayout();
+    }
+  });
   document.getElementById("deleteLayoutButton").addEventListener("click", deleteSelectedLayout);
 
   document.getElementById("investmentForm").addEventListener("submit", (event) => {
@@ -1282,6 +1330,7 @@ renderReferenceOptions();
 setDefaultFormValues();
 bindEvents();
 enableLayoutDragging();
+updateLayoutToolbar();
 
 
 
