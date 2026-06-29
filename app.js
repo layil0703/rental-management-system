@@ -461,6 +461,24 @@ function refreshAllViews() {
   renderRepairs();
   renderFloorPlans();
   renderSnapshots();
+  renderReferenceOptions();
+}
+
+function renderReferenceOptions() {
+  const caseOptions = document.getElementById("caseNameOptions");
+  const propertyOptions = document.getElementById("propertyNameOptions");
+
+  if (caseOptions) {
+    caseOptions.innerHTML = cases
+      .map((item) => `<option value="${item.name}">${item.modeLabel} / ${item.landlord}</option>`)
+      .join("");
+  }
+
+  if (propertyOptions) {
+    propertyOptions.innerHTML = properties
+      .map((item) => `<option value="${item.name}">${item.layout} / ${item.status}</option>`)
+      .join("");
+  }
 }
 
 function getCaseFinancialSnapshot(caseItem) {
@@ -873,6 +891,7 @@ function bindEvents() {
     renderRepairs();
     renderFloorPlans();
     renderSnapshots();
+    renderReferenceOptions();
     document.getElementById("caseEditNote").textContent = `${newName} 已儲存。`;
   });
 
@@ -930,6 +949,7 @@ function bindEvents() {
     renderAssets();
     renderSnapshots();
     renderDashboardMetrics();
+    renderReferenceOptions();
     document.getElementById("propertyEditNote").textContent = `${newName} 已儲存。`;
   });
 
@@ -1208,6 +1228,7 @@ function bindEvents() {
     renderRoiList();
     renderSnapshots();
     renderDashboardMetrics();
+    renderReferenceOptions();
     const snapshot = getCaseFinancialSnapshot(newCase);
     document.getElementById("caseFormNote").textContent = `${newCase.name} 已保存到本機，公司投入 ${formatMoney(investment)}，動態年化 ROI ${snapshot.annualizedRoi === null ? "未設定" : `${snapshot.annualizedRoi.toFixed(1)}%`}。`;
     event.currentTarget.reset();
@@ -1257,6 +1278,7 @@ renderRepairs();
 renderSnapshots();
 renderFloorPlans();
 renderTransactions();
+renderReferenceOptions();
 setDefaultFormValues();
 bindEvents();
 enableLayoutDragging();

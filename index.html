@@ -129,7 +129,7 @@
           <section class="panel action-panel">
             <div class="panel-heading"><div><p class="eyebrow">資料補正</p><h2>補正公司投入</h2></div></div>
             <form class="form-grid" id="investmentForm">
-              <label><span>案件名稱</span><input name="caseName" type="text" placeholder="例如：信義 A3" required /></label>
+              <label><span>案件名稱</span><input name="caseName" type="text" list="caseNameOptions" placeholder="例如：信義 A3" required /></label>
               <label><span>公司投入成本</span><input name="companyInvestment" type="number" min="0" placeholder="150000" required /></label>
               <label><span>備註</span><input name="note" type="text" placeholder="例如：補登裝修與家電" /></label>
               <button class="primary-button" type="submit">更新投入</button>
@@ -205,7 +205,7 @@
           <section class="panel action-panel finance-entry-panel">
             <div class="panel-heading"><div><p class="eyebrow">快速登錄</p><h2>新增收支紀錄</h2></div></div>
             <form class="form-grid" id="transactionForm">
-              <label><span>所屬案件</span><input name="caseName" type="text" placeholder="例如：信義 A3" required /></label>
+              <label><span>所屬案件</span><input name="caseName" type="text" list="caseNameOptions" placeholder="例如：信義 A3" required /></label>
               <label><span>類型</span><select name="type" required><option value="income">收入</option><option value="expense">支出</option><option value="payout">房東撥款</option><option value="reimbursement">代墊回收</option></select></label>
               <label><span>項目</span><input name="category" type="text" placeholder="租金、修繕、家電、管理費" required /></label>
               <label><span>金額</span><input name="amount" type="number" min="0" placeholder="12000" required /></label>
@@ -230,7 +230,7 @@
             <div class="panel-heading"><div><p class="eyebrow">編輯</p><h2>編輯收支紀錄</h2></div></div>
             <form class="form-grid" id="transactionEditForm">
               <input name="index" type="hidden" />
-              <label><span>所屬案件</span><input name="caseName" type="text" required /></label>
+              <label><span>所屬案件</span><input name="caseName" type="text" list="caseNameOptions" required /></label>
               <label><span>類型</span><select name="type" required><option value="income">收入</option><option value="expense">支出</option><option value="payout">房東撥款</option><option value="reimbursement">代墊回收</option></select></label>
               <label><span>項目</span><input name="category" type="text" required /></label>
               <label><span>金額</span><input name="amount" type="number" min="0" required /></label>
@@ -248,7 +248,7 @@
           <section class="panel action-panel">
             <div class="panel-heading"><div><p class="eyebrow">快速建立</p><h2>新增家電 / 前置投入</h2></div><strong id="assetSummary">每月折舊 NT$ 0</strong></div>
             <form class="form-grid" id="assetForm">
-              <label><span>所屬物件</span><input name="propertyName" type="text" placeholder="例如：大安 2A" required /></label>
+              <label><span>所屬物件</span><input name="propertyName" type="text" list="propertyNameOptions" placeholder="例如：大安 2A" required /></label>
               <label><span>品項名稱</span><input name="assetName" type="text" placeholder="冷氣、冰箱、床組" required /></label>
               <label><span>類別</span><select name="category" required><option value="appliance">家電</option><option value="furniture">家具</option><option value="renovation">裝修</option><option value="cleaning">清潔</option><option value="other">其他</option></select></label>
               <label><span>投入金額</span><input name="amount" type="number" min="0" placeholder="32000" required /></label>
@@ -262,7 +262,7 @@
             <div class="panel-heading"><div><p class="eyebrow">編輯</p><h2>編輯家電 / 前置投入</h2></div></div>
             <form class="form-grid" id="assetEditForm">
               <input name="index" type="hidden" />
-              <label><span>所屬物件</span><input name="propertyName" type="text" required /></label>
+              <label><span>所屬物件</span><input name="propertyName" type="text" list="propertyNameOptions" required /></label>
               <label><span>品項名稱</span><input name="assetName" type="text" required /></label>
               <label><span>類別</span><select name="category" required><option value="家電">家電</option><option value="家具">家具</option><option value="裝修">裝修</option><option value="清潔">清潔</option><option value="其他">其他</option></select></label>
               <label><span>投入金額</span><input name="amount" type="number" min="0" required /></label>
@@ -355,7 +355,7 @@
           <section class="panel action-panel">
             <div class="panel-heading"><div><p class="eyebrow">快速建立</p><h2>新增修繕工單</h2></div><strong id="repairSummary">待處理 0 筆</strong></div>
             <form class="form-grid" id="repairForm">
-              <label><span>所屬案件</span><input name="caseName" type="text" placeholder="例如：中山 5F" required /></label>
+              <label><span>所屬案件</span><input name="caseName" type="text" list="caseNameOptions" placeholder="例如：中山 5F" required /></label>
               <label><span>修繕標題</span><input name="title" type="text" placeholder="例如：冷氣不冷" required /></label>
               <label><span>狀態</span><select name="status" required><option value="reported">已通報</option><option value="reviewing">審核中</option><option value="scheduled">已排程</option><option value="completed">已完成</option></select></label>
               <label><span>優先</span><select name="priority" required><option value="normal">一般</option><option value="urgent">緊急</option><option value="high">高</option><option value="low">低</option></select></label>
@@ -369,7 +369,7 @@
             <div class="panel-heading"><div><p class="eyebrow">編輯</p><h2>編輯修繕工單</h2></div></div>
             <form class="form-grid" id="repairEditForm">
               <input name="index" type="hidden" />
-              <label><span>所屬案件</span><input name="caseName" type="text" required /></label>
+              <label><span>所屬案件</span><input name="caseName" type="text" list="caseNameOptions" required /></label>
               <label><span>修繕標題</span><input name="title" type="text" required /></label>
               <label><span>狀態</span><select name="status" required><option value="reported">已通報</option><option value="reviewing">審核中</option><option value="scheduled">已排程</option><option value="completed">已完成</option></select></label>
               <label><span>優先</span><select name="priority" required><option value="normal">一般</option><option value="urgent">緊急</option><option value="high">高</option><option value="low">低</option></select></label>
@@ -386,6 +386,8 @@
         <section class="view" id="reports"><div class="content-grid"><section class="panel wide"><div class="panel-heading"><div><p class="eyebrow">報表</p><h2>每月 ROI 快照</h2></div></div><div class="snapshot-grid" id="snapshotGrid"></div></section></div></section>
       </main>
     </div>
+    <datalist id="caseNameOptions"></datalist>
+    <datalist id="propertyNameOptions"></datalist>
     <script src="./app.js"></script>
   </body>
 </html>
